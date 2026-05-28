@@ -42,4 +42,4 @@ npm run dev
 **流量削峰**: RabbitMQ 异步下单
 **接口防刷**: 动态秒杀路径 + JWT认证 + 限流
 
-详见 [DESIGN.md](./DESIGN.md)
+详见 [DESIGN.md](docs/DESIGN.md)
