@@ -2,23 +2,27 @@
 
 ## 项目概述
 
-Spring Boot 3.2 + Vue 3 秒杀商城，核心技术栈：MyBatis-Plus / Redis / RabbitMQ / JWT / Element Plus。
+Spring Boot 3.2 + Vue 3 秒杀商城，核心技术栈：MyBatis-Plus / Redis / RabbitMQ / JWT / Naive UI + Tailwind CSS。
 
 ## 目录结构
 
 ```
 ├── backend/                  # Spring Boot 后端 (端口 8080)
 │   └── src/main/java/com/seckill/
+│       ├── annotation/       # @RateLimit 限流注解
 │       ├── config/           # 全局异常处理、JWT拦截器、Redis/RabbitMQ配置、CORS
-│       ├── controller/       # User/Goods/Seckill/Order
-│       ├── dto/              # LoginDto, RegisterDto, SeckillDto
-│       ├── entity/           # User, Goods, SeckillGoods, Order, SeckillOrder
-│       ├── interceptor/      # JwtInterceptor (从Header取Bearer token)
-│       ├── mapper/           # MyBatis-Plus BaseMapper
-│       ├── mq/               # SeckillConsumer (RabbitMQ下单消费者)
+│       ├── constant/         # AppConstants 集中管理常量
+│       ├── controller/       # User/Goods/Seckill/Order/Cart/Notification
+│       ├── dto/              # LoginDto, RegisterDto, SeckillDto, ChangePasswordDto 等
+│       ├── entity/           # User, Goods, SeckillGoods, Order, Cart, Notification
+│       ├── enums/            # OrderStatus 订单状态枚举
+│       ├── interceptor/      # JwtInterceptor, RateLimitInterceptor
+│       ├── mapper/           # MyBatis-Plus BaseMapper + XML
+│       ├── mq/               # SeckillConsumer (RabbitMQ下单+通知消费者)
 │       ├── service/          # 接口 + impl 实现
-│       ├── utils/            # JwtUtil, RedisKey, Result, SnowflakeUtil
-│       └── vo/               # GoodsVo, OrderVo, SeckillGoodsVo
+│       ├── task/             # OrderTimeoutTask 订单超时取消定时任务
+│       ├── utils/            # JwtUtil, RedisKey, Result, SnowflakeUtil, PageResult
+│       └── vo/               # GoodsVo, OrderVo, SeckillGoodsVo, CartVo, UserVo
 ├── frontend/                 # Vue 3 + Vite 前端 (端口 5173)
 │   └── src/
 │       ├── api/              # axios 封装 + 各模块 API
@@ -26,12 +30,10 @@ Spring Boot 3.2 + Vue 3 秒杀商城，核心技术栈：MyBatis-Plus / Redis / 
 │       ├── components/       # Countdown.vue 倒计时组件
 │       ├── router/           # 路由配置
 │       ├── store/            # Pinia 用户状态
-│       └── views/            # Login, Register, Home, Detail, OrderList
+│       └── views/            # Login, Register, Home, Detail, OrderList, Cart, Messages, Profile, OrderDetail
 ├── sql/
 │   └── init.sql              # MySQL 建表 + 测试数据
-├── docker-compose.yml        # MySQL/Redis/RabbitMQ 容器
-├── start.bat                 # 一键启动
-└── stop.bat                  # 一键关闭
+└── docker-compose.yml        # MySQL/Redis/RabbitMQ 容器
 ```
 
 ## 启动命令
@@ -46,8 +48,6 @@ cd backend && mvn clean spring-boot:run
 # 前端
 cd frontend && npm run dev
 ```
-
-> 批处理 `start.bat` / `stop.bat` 一键启停所有服务。
 
 ## 容器端口映射
 
@@ -64,7 +64,7 @@ cd frontend && npm run dev
 - **连接**: `jdbc:mysql://localhost:3307/seckill`
 - **数据库名**: `seckill`
 - **用户名/密码**: `root` / `root123`
-- **表**: `t_user`, `t_goods`, `t_seckill_goods`, `t_order`, `t_seckill_order`
+- **表**: `t_user`, `t_goods`, `t_seckill_goods`, `t_order`, `t_seckill_order`, `t_cart`, `t_notification`
 - **ID 策略**: User 和 Order 用 Snowflake，Goods 和 SeckillGoods 用 AUTO_INCREMENT
 - **init.sql**: 容器首次启动自动执行，已添加 `SET NAMES utf8mb4` 防中文乱码
 
@@ -77,6 +77,9 @@ cd frontend && npm run dev
 - `knife4j-openapi3-jakarta-starter:4.4.0` — API 文档 http://localhost:8080/doc.html
 - `jjwt:0.12.5` — JWT 认证
 - `hutool-all:5.8.27` — Snowflake ID、MD5 等工具
+- `guava` — BloomFilter 防缓存穿透
+- `dotenv-java:3.0.0` — .env 环境变量加载
+- `spring-boot-starter-actuator` — 健康检查与监控
 
 ## API 路由
 
@@ -90,7 +93,17 @@ GET  /api/seckill/path        # 获取秒杀路径（需登录）
 POST /api/seckill/{path}/execute  # 执行秒杀（需登录）
 GET  /api/seckill/result/{id} # 查询秒杀结果（需登录）
 GET  /api/order/list          # 我的订单（需登录）
+GET  /api/order/detail/{id}   # 订单详情（需登录）
 POST /api/order/cancel/{id}   # 取消订单（需登录）
+GET  /api/cart/list           # 购物车列表（需登录）
+POST /api/cart/add            # 添加到购物车（需登录）
+PUT  /api/cart/{id}           # 修改购物车数量（需登录）
+DELETE /api/cart/{id}         # 删除购物车项（需登录）
+DELETE /api/cart/clear        # 清空购物车（需登录）
+GET  /api/notification/list   # 通知列表（需登录）
+PUT  /api/notification/read-all  # 全部标记已读（需登录）
+GET  /api/user/info           # 用户信息（需登录）
+PUT  /api/user/password       # 修改密码（需登录）
 ```
 
 > JWT 拦截：`/api/**` 除 register/login 外均需 Authorization: Bearer <token>

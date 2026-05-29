@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seckill.mapper.GoodsMapper">
+
+    <!-- 商品列表（关联秒杀信息） -->
+    <select id="listWithSeckill" resultType="com.seckill.vo.GoodsVo">
+        SELECT g.*, sg.seckill_price, sg.stock_count, sg.start_time, sg.end_time
+        FROM t_goods g
+        LEFT JOIN t_seckill_goods sg ON g.id = sg.goods_id
+        ORDER BY g.id
+    </select>
+
+    <!-- 商品详情 -->
+    <select id="getDetailById" resultType="com.seckill.vo.GoodsVo">
+        SELECT g.*, sg.seckill_price, sg.stock_count, sg.start_time, sg.end_time
+        FROM t_goods g
+        LEFT JOIN t_seckill_goods sg ON g.id = sg.goods_id
+        WHERE g.id = #{id}
+    </select>
+
+    <!-- 批量查询商品详情（避免 N+1） -->
+    <select id="getDetailByIds" resultType="com.seckill.vo.GoodsVo">
+        SELECT g.*, sg.seckill_price, sg.stock_count, sg.start_time, sg.end_time
+        FROM t_goods g
+        LEFT JOIN t_seckill_goods sg ON g.id = sg.goods_id
+        WHERE g.id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>

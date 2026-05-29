@@ -25,7 +25,7 @@
 | 层次 | 技术 | 说明 |
 |------|------|------|
 | **后端框架** | Spring Boot 3.x + JDK 17 | 主应用框架 |
-| **前端框架** | Vue 3 + Vite + Element Plus | 前后端分离 |
+| **前端框架** | Vue 3 + Vite + Naive UI + Tailwind CSS | 前后端分离 |
 | **数据库** | MySQL 8.0 | 持久化存储 |
 | **缓存** | Redis 7.x (Lettuce 客户端) | 库存预热、分布式锁、限流 |
 | **消息队列** | RabbitMQ 3.x | 异步下单、流量削峰 |
