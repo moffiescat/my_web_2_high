@@ -1,6 +1,7 @@
 package com.seckill.interceptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seckill.constant.AppConstants;
 import com.seckill.utils.JwtUtil;
 import com.seckill.utils.Result;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,18 +23,18 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String token = request.getHeader("Authorization");
-        if (token == null || !token.startsWith("Bearer ")) {
+        String token = request.getHeader(AppConstants.AUTH_HEADER);
+        if (token == null || !token.startsWith(AppConstants.AUTH_TOKEN_PREFIX)) {
             response.setContentType("application/json;charset=UTF-8");
-            response.setStatus(401);
-            response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "未登录或Token无效")));
+            response.setStatus(AppConstants.RESULT_CODE_UNAUTHORIZED);
+            response.getWriter().write(objectMapper.writeValueAsString(Result.error(AppConstants.RESULT_CODE_UNAUTHORIZED, AppConstants.MSG_NOT_LOGIN)));
             return false;
         }
-        token = token.substring(7);
+        token = token.substring(AppConstants.AUTH_TOKEN_PREFIX_LENGTH);
         if (!jwtUtil.validateToken(token)) {
             response.setContentType("application/json;charset=UTF-8");
-            response.setStatus(401);
-            response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "Token已过期，请重新登录")));
+            response.setStatus(AppConstants.RESULT_CODE_UNAUTHORIZED);
+            response.getWriter().write(objectMapper.writeValueAsString(Result.error(AppConstants.RESULT_CODE_UNAUTHORIZED, AppConstants.MSG_TOKEN_EXPIRED)));
             return false;
         }
         // 将 userId 存到 request attribute

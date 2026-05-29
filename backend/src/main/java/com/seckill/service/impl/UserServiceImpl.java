@@ -1,6 +1,7 @@
 package com.seckill.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.seckill.constant.AppConstants;
 import com.seckill.dto.LoginDto;
 import com.seckill.dto.RegisterDto;
 import com.seckill.entity.User;
@@ -32,7 +33,7 @@ public class UserServiceImpl implements UserService {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getPhone, dto.getPhone());
         if (userMapper.selectCount(wrapper) > 0) {
-            throw new RuntimeException("手机号已注册");
+            throw new RuntimeException(AppConstants.MSG_PHONE_REGISTERED);
         }
         User user = new User();
         user.setId(snowflakeUtil.nextId());
@@ -49,7 +50,7 @@ public class UserServiceImpl implements UserService {
         wrapper.eq(User::getPhone, dto.getPhone());
         User user = userMapper.selectOne(wrapper);
         if (user == null || !encoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("手机号或密码错误");
+            throw new RuntimeException(AppConstants.MSG_PHONE_OR_PASSWORD_ERROR);
         }
         user.setLastLoginTime(LocalDateTime.now());
         userMapper.updateById(user);

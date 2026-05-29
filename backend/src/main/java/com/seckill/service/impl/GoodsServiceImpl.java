@@ -2,6 +2,7 @@ package com.seckill.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.seckill.entity.SeckillGoods;
+import com.seckill.constant.AppConstants;
 import com.seckill.mapper.GoodsMapper;
 import com.seckill.mapper.SeckillGoodsMapper;
 import com.seckill.service.GoodsService;
@@ -46,7 +47,7 @@ public class GoodsServiceImpl implements GoodsService {
         }
         GoodsVo detail = goodsMapper.getDetailById(goodsId);
         if (detail != null) {
-            redisTemplate.opsForValue().set(key, detail, 10, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set(key, detail, AppConstants.GOODS_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
         }
         return detail;
     }

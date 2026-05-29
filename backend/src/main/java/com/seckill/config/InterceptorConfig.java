@@ -1,6 +1,7 @@
 package com.seckill.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seckill.constant.AppConstants;
 import com.seckill.interceptor.JwtInterceptor;
 import com.seckill.utils.JwtUtil;
 import org.springframework.context.annotation.Configuration;
@@ -21,13 +22,7 @@ public class InterceptorConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new JwtInterceptor(jwtUtil, objectMapper))
-                .addPathPatterns("/api/**")
-                .excludePathPatterns(
-                        "/api/user/register",
-                        "/api/user/login",
-                        "/swagger-ui/**",
-                        "/v3/api-docs/**",
-                        "/doc.html"
-                );
+                .addPathPatterns(AppConstants.INTERCEPTOR_PATH_PATTERN)
+                .excludePathPatterns(AppConstants.INTERCEPTOR_EXCLUDE_PATHS);
     }
 }

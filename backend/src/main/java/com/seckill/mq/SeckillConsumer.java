@@ -2,6 +2,7 @@ package com.seckill.mq;
 
 import com.rabbitmq.client.Channel;
 import com.seckill.config.RabbitMQConfig;
+import com.seckill.constant.AppConstants;
 import com.seckill.service.impl.SeckillServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,8 @@ public class SeckillConsumer {
     public void handleOrder(Map<String, Object> msg, Channel channel,
                             @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
         try {
-            Long userId = Long.valueOf(msg.get("userId").toString());
-            Long goodsId = Long.valueOf(msg.get("goodsId").toString());
+            Long userId = Long.valueOf(msg.get(AppConstants.MQ_MSG_KEY_USER_ID).toString());
+            Long goodsId = Long.valueOf(msg.get(AppConstants.MQ_MSG_KEY_GOODS_ID).toString());
             log.info("收到秒杀下单消息: userId={}, goodsId={}", userId, goodsId);
             seckillService.createOrder(userId, goodsId);
             channel.basicAck(tag, false);

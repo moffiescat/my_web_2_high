@@ -2,10 +2,16 @@ package com.seckill.service.impl;
 
 import cn.hutool.crypto.digest.MD5;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.google.common.hash.BloomFilter;
 import com.seckill.config.RabbitMQConfig;
+import com.seckill.constant.AppConstants;
+import com.seckill.entity.Goods;
+import com.seckill.enums.OrderStatus;
 import com.seckill.entity.Order;
 import com.seckill.entity.SeckillGoods;
 import com.seckill.entity.SeckillOrder;
+import com.seckill.mapper.GoodsMapper;
 import com.seckill.mapper.OrderMapper;
 import com.seckill.mapper.SeckillGoodsMapper;
 import com.seckill.mapper.SeckillOrderMapper;
@@ -18,9 +24,8 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -35,7 +40,9 @@ public class SeckillServiceImpl implements SeckillService {
     private final SeckillGoodsMapper seckillGoodsMapper;
     private final OrderMapper orderMapper;
     private final SeckillOrderMapper seckillOrderMapper;
+    private final GoodsMapper goodsMapper;
     private final SnowflakeUtil snowflakeUtil;
+    private final BloomFilter<Long> bloomFilter;
 
     public SeckillServiceImpl(RedisTemplate<String, Object> redisTemplate,
                               DefaultRedisScript<Long> stockDeductionScript,
@@ -43,37 +50,45 @@ public class SeckillServiceImpl implements SeckillService {
                               SeckillGoodsMapper seckillGoodsMapper,
                               OrderMapper orderMapper,
                               SeckillOrderMapper seckillOrderMapper,
-                              SnowflakeUtil snowflakeUtil) {
+                              GoodsMapper goodsMapper,
+                              SnowflakeUtil snowflakeUtil,
+                              BloomFilter<Long> bloomFilter) {
         this.redisTemplate = redisTemplate;
         this.stockDeductionScript = stockDeductionScript;
         this.rabbitTemplate = rabbitTemplate;
         this.seckillGoodsMapper = seckillGoodsMapper;
         this.orderMapper = orderMapper;
         this.seckillOrderMapper = seckillOrderMapper;
+        this.goodsMapper = goodsMapper;
         this.snowflakeUtil = snowflakeUtil;
+        this.bloomFilter = bloomFilter;
     }
 
     @Override
     public String getSeckillPath(Long userId, Long goodsId) {
+        // 布隆过滤器预判，拦截不存在的商品ID，防止缓存穿透
+        if (!bloomFilter.mightContain(goodsId)) {
+            throw new RuntimeException(AppConstants.MSG_SECKILL_GOODS_NOT_FOUND);
+        }
         // 校验秒杀商品是否存在且有效
         SeckillGoods sg = seckillGoodsMapper.selectOne(
                 new LambdaQueryWrapper<SeckillGoods>()
                         .eq(SeckillGoods::getGoodsId, goodsId)
         );
         if (sg == null) {
-            throw new RuntimeException("秒杀商品不存在");
+            throw new RuntimeException(AppConstants.MSG_SECKILL_GOODS_NOT_FOUND);
         }
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(sg.getStartTime())) {
-            throw new RuntimeException("秒杀尚未开始");
+            throw new RuntimeException(AppConstants.MSG_SECKILL_NOT_STARTED);
         }
         if (now.isAfter(sg.getEndTime())) {
-            throw new RuntimeException("秒杀已结束");
+            throw new RuntimeException(AppConstants.MSG_SECKILL_ENDED);
         }
 
         // 生成随机秒杀路径
         String path = MD5.create().digestHex(UUID.randomUUID().toString());
-        redisTemplate.opsForValue().set(RedisKey.seckillPath(userId, goodsId), path, 60, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(RedisKey.seckillPath(userId, goodsId), path, AppConstants.SECKILL_PATH_TTL_SECONDS, TimeUnit.SECONDS);
         return path;
     }
 
@@ -82,7 +97,7 @@ public class SeckillServiceImpl implements SeckillService {
         // 1. 校验秒杀路径
         String correctPath = (String) redisTemplate.opsForValue().get(RedisKey.seckillPath(userId, goodsId));
         if (correctPath == null || !correctPath.equals(path)) {
-            throw new RuntimeException("秒杀路径无效，请重新获取");
+            throw new RuntimeException(AppConstants.MSG_SECKILL_PATH_INVALID);
         }
         // 校验通过后删除路径，防止重复使用
         redisTemplate.delete(RedisKey.seckillPath(userId, goodsId));
@@ -92,28 +107,28 @@ public class SeckillServiceImpl implements SeckillService {
         String uidKey = RedisKey.seckillUid(goodsId);
         Long result = redisTemplate.execute(
                 stockDeductionScript,
-                Collections.singletonList(stockKey),
-                stockKey, uidKey, String.valueOf(userId)
+                Arrays.asList(stockKey, uidKey),
+                String.valueOf(userId)
         );
 
         if (result == null) {
-            throw new RuntimeException("系统繁忙，请稍后再试");
+            throw new RuntimeException(AppConstants.MSG_SYSTEM_BUSY);
         }
-        if (result == -1) {
-            throw new RuntimeException("请勿重复抢购");
+        if (result == AppConstants.LUA_RESULT_DUPLICATE) {
+            throw new RuntimeException(AppConstants.MSG_SECKILL_DUPLICATE);
         }
-        if (result == -2) {
-            throw new RuntimeException("商品已售罄");
+        if (result == AppConstants.LUA_RESULT_SOLD_OUT) {
+            throw new RuntimeException(AppConstants.MSG_SECKILL_SOLD_OUT);
         }
 
         // 3. 发送 MQ 消息异步创建订单
         Map<String, Object> msg = new HashMap<>();
-        msg.put("userId", userId);
-        msg.put("goodsId", goodsId);
+        msg.put(AppConstants.MQ_MSG_KEY_USER_ID, userId);
+        msg.put(AppConstants.MQ_MSG_KEY_GOODS_ID, goodsId);
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_SECKILL, RabbitMQConfig.RK_ORDER, msg);
 
         // 4. 返回 0 表示排队中
-        return 0L;
+        return AppConstants.SECKILL_RESULT_QUEUING;
     }
 
     @Override
@@ -133,10 +148,10 @@ public class SeckillServiceImpl implements SeckillService {
         if (stockObj != null && Integer.parseInt(stockObj.toString()) <= 0) {
             Boolean isMember = redisTemplate.opsForSet().isMember(RedisKey.seckillUid(goodsId), userId.toString());
             if (isMember == null || !isMember) {
-                return -1L; // 已售罄
+                return AppConstants.SECKILL_RESULT_SOLD_OUT; // 已售罄
             }
         }
-        return 0L; // 还在排队中
+        return AppConstants.SECKILL_RESULT_QUEUING; // 还在排队中
     }
 
     /**
@@ -158,7 +173,7 @@ public class SeckillServiceImpl implements SeckillService {
 
         // 扣减 MySQL 库存
         int rows = seckillGoodsMapper.update(null,
-                new LambdaQueryWrapper<SeckillGoods>()
+                new LambdaUpdateWrapper<SeckillGoods>()
                         .eq(SeckillGoods::getGoodsId, goodsId)
                         .gt(SeckillGoods::getStockCount, 0)
                         .setSql("stock_count = stock_count - 1")
@@ -167,14 +182,22 @@ public class SeckillServiceImpl implements SeckillService {
             return; // 库存不足
         }
 
+        // 查询商品名称
+        String goodsName = "";
+        Goods goods = goodsMapper.selectById(goodsId);
+        if (goods != null) {
+            goodsName = goods.getGoodsName();
+        }
+
         // 创建订单
         long orderId = snowflakeUtil.nextId();
         Order order = new Order();
         order.setId(orderId);
         order.setUserId(userId);
         order.setGoodsId(goodsId);
+        order.setGoodsName(goodsName);
         order.setGoodsPrice(sg.getSeckillPrice());
-        order.setStatus(0);
+        order.setStatus(OrderStatus.PENDING.getCode());
         order.setCreateTime(LocalDateTime.now());
         orderMapper.insert(order);
 

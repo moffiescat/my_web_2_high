@@ -1,7 +1,9 @@
 package com.seckill.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.seckill.constant.AppConstants;
 import com.seckill.entity.Order;
+import com.seckill.enums.OrderStatus;
 import com.seckill.mapper.OrderMapper;
 import com.seckill.service.OrderService;
 import com.seckill.vo.OrderVo;
@@ -23,7 +25,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderVo getDetail(Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new RuntimeException(AppConstants.MSG_ORDER_NOT_FOUND);
         }
         return toVo(order);
     }
@@ -42,12 +44,12 @@ public class OrderServiceImpl implements OrderService {
     public void cancel(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
-            throw new RuntimeException("订单不存在");
+            throw new RuntimeException(AppConstants.MSG_ORDER_NOT_FOUND);
         }
-        if (order.getStatus() != 0) {
-            throw new RuntimeException("订单状态不允许取消");
+        if (order.getStatus() != OrderStatus.PENDING.getCode()) {
+            throw new RuntimeException(AppConstants.MSG_ORDER_STATUS_DENIED);
         }
-        order.setStatus(2);
+        order.setStatus(OrderStatus.CANCELLED.getCode());
         orderMapper.updateById(order);
     }
 
