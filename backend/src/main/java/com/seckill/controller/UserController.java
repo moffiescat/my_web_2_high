@@ -4,6 +4,8 @@ import com.seckill.dto.LoginDto;
 import com.seckill.dto.RegisterDto;
 import com.seckill.service.UserService;
 import com.seckill.utils.Result;
+import com.seckill.vo.UserVo;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,5 +29,11 @@ public class UserController {
     public Result<String> login(@Valid @RequestBody LoginDto dto) {
         String token = userService.login(dto);
         return Result.ok(token);
+    }
+
+    @GetMapping("/info")
+    public Result<UserVo> info(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        return Result.ok(userService.getInfo(userId));
     }
 }

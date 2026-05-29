@@ -7,3 +7,7 @@ export function login(phone, password) {
 export function register(nickname, phone, password) {
   return request({ url: '/user/register', method: 'post', data: { nickname, phone, password } })
 }
+
+export function getUserInfo() {
+  return request({ url: '/user/info', method: 'get' })
+}

@@ -9,6 +9,7 @@ import com.seckill.mapper.UserMapper;
 import com.seckill.service.UserService;
 import com.seckill.utils.JwtUtil;
 import com.seckill.utils.SnowflakeUtil;
+import com.seckill.vo.UserVo;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -60,5 +61,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public User getById(Long userId) {
         return userMapper.selectById(userId);
+    }
+
+    @Override
+    public UserVo getInfo(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        UserVo vo = new UserVo();
+        vo.setId(user.getId());
+        vo.setPhone(user.getPhone());
+        vo.setNickname(user.getNickname());
+        vo.setRegisterTime(user.getRegisterTime());
+        vo.setLastLoginTime(user.getLastLoginTime());
+        return vo;
     }
 }

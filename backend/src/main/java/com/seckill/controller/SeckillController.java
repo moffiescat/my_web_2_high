@@ -4,6 +4,7 @@ import com.seckill.dto.SeckillDto;
 import com.seckill.service.SeckillService;
 import com.seckill.utils.Result;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,7 +26,7 @@ public class SeckillController {
 
     @PostMapping("/{path}/execute")
     public Result<Long> execute(@PathVariable String path,
-                                @RequestBody SeckillDto dto,
+                                @Valid @RequestBody SeckillDto dto,
                                 HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         Long result = seckillService.doSeckill(userId, dto.getGoodsId(), path);

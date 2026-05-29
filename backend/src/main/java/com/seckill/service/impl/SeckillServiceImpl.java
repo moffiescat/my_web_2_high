@@ -18,6 +18,8 @@ import com.seckill.mapper.SeckillOrderMapper;
 import com.seckill.service.SeckillService;
 import com.seckill.utils.RedisKey;
 import com.seckill.utils.SnowflakeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -33,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class SeckillServiceImpl implements SeckillService {
+
+    private static final Logger log = LoggerFactory.getLogger(SeckillServiceImpl.class);
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final DefaultRedisScript<Long> stockDeductionScript;
@@ -159,15 +163,20 @@ public class SeckillServiceImpl implements SeckillService {
      */
     @Transactional
     public void createOrder(Long userId, Long goodsId) {
-        SeckillGoods sg = seckillGoodsMapper.selectOne(
-                new LambdaQueryWrapper<SeckillGoods>().eq(SeckillGoods::getGoodsId, goodsId)
+        // 幂等性校验: 检查是否已为该用户生成过秒杀订单
+        Long existsOrder = seckillOrderMapper.selectCount(
+                new LambdaQueryWrapper<SeckillOrder>()
+                        .eq(SeckillOrder::getUserId, userId)
+                        .eq(SeckillOrder::getGoodsId, goodsId)
         );
-        if (sg == null) {
+        if (existsOrder != null && existsOrder > 0) {
+            log.warn("重复消息，已忽略: userId={}, goodsId={}", userId, goodsId);
             return;
         }
 
-        // 再次校验 MySQL 库存
-        if (sg.getStockCount() <= 0) {
+        // SELECT ... FOR UPDATE 锁住秒杀商品行，防止并发超卖
+        SeckillGoods sg = seckillGoodsMapper.selectForUpdate(goodsId);
+        if (sg == null || sg.getStockCount() <= 0) {
             return;
         }
 

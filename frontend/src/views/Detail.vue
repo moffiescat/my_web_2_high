@@ -93,25 +93,37 @@ async function handleSeckill() {
 }
 
 function pollResult() {
-  const timer = setInterval(async () => {
+  let interval = 1000
+  const maxInterval = 10000
+  let timer = null
+
+  async function poll() {
     try {
       const res = await getSeckillResult(goods.value.id)
       const orderId = res.data
       if (orderId > 0) {
-        clearInterval(timer)
+        clearTimeout(timer)
         seckillStatus.value = 'success'
         seckilling.value = false
         window.$message.success(`秒杀成功！订单号: ${orderId}`)
+        return
       } else if (orderId === -1) {
-        clearInterval(timer)
+        clearTimeout(timer)
         seckillStatus.value = 'soldout'
         seckilling.value = false
+        return
       }
     } catch {
-      clearInterval(timer)
+      clearTimeout(timer)
       seckillStatus.value = 'ready'
       seckilling.value = false
+      return
     }
-  }, 1000)
+    // 指数退避: 1s → 2s → 4s → ... → 10s
+    interval = Math.min(interval * 2, maxInterval)
+    timer = setTimeout(poll, interval)
+  }
+
+  timer = setTimeout(poll, interval)
 }
 </script>

@@ -67,9 +67,8 @@
 import { ref, onMounted } from 'vue'
 import { NIcon } from 'naive-ui'
 import { PersonOutline, GridOutline, DocumentTextOutline, CartOutline, NotificationsOutline } from '@vicons/ionicons5'
-import { useUserStore } from '../store/user'
+import { getUserInfo } from '../api/user'
 
-const userStore = useUserStore()
 const userId = ref('--')
 const userInfo = ref({
   nickname: '',
@@ -77,12 +76,13 @@ const userInfo = ref({
   registerTime: ''
 })
 
-onMounted(() => {
+onMounted(async () => {
   try {
-    const token = userStore.token
-    if (!token) return
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    userId.value = payload.userId || '--'
+    const res = await getUserInfo().catch(() => ({ data: null }))
+    if (res.data) {
+      userId.value = res.data.id || '--'
+      userInfo.value = res.data
+    }
   } catch { /* ignore */ }
 })
 </script>

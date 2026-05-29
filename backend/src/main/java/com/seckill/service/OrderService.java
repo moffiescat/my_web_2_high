@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface OrderService {
 
-    OrderVo getDetail(Long orderId);
+    OrderVo getDetail(Long userId, Long orderId);
 
     List<OrderVo> listByUser(Long userId);
 

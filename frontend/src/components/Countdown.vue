@@ -22,39 +22,39 @@ const props = defineProps({
   startTime: String
 })
 
+const startTs = new Date(props.startTime).getTime()
+const endTs = new Date(props.endTime).getTime()
+
 const now = ref(Date.now())
 let timer = null
 
 onMounted(() => { timer = setInterval(() => now.value = Date.now(), 1000) })
 onUnmounted(() => { clearInterval(timer) })
 
-const status = computed(() => {
-  const s = new Date(props.startTime).getTime()
-  const e = new Date(props.endTime).getTime()
-  if (now.value < s) return 0
-  if (now.value > e) return 2
-  return 1
-})
-
 function pad(n) { return String(n).padStart(2, '0') }
 
-const h = computed(() => {
-  const target = status.value === 0 ? new Date(props.startTime).getTime() : new Date(props.endTime).getTime()
-  const diff = Math.max(0, target - now.value)
-  return pad(Math.floor(diff / 3600000))
+const countdown = computed(() => {
+  let status, diff
+  if (now.value < startTs) {
+    status = 0
+    diff = Math.max(0, startTs - now.value)
+  } else if (now.value > endTs) {
+    status = 2
+    diff = 0
+  } else {
+    status = 1
+    diff = Math.max(0, endTs - now.value)
+  }
+  const h = pad(Math.floor(diff / 3600000))
+  const m = pad(Math.floor((diff % 3600000) / 60000))
+  const s = pad(Math.floor((diff % 60000) / 1000))
+  return { status, h, m, s }
 })
 
-const m = computed(() => {
-  const target = status.value === 0 ? new Date(props.startTime).getTime() : new Date(props.endTime).getTime()
-  const diff = Math.max(0, target - now.value)
-  return pad(Math.floor((diff % 3600000) / 60000))
-})
-
-const s = computed(() => {
-  const target = status.value === 0 ? new Date(props.startTime).getTime() : new Date(props.endTime).getTime()
-  const diff = Math.max(0, target - now.value)
-  return pad(Math.floor((diff % 60000) / 1000))
-})
+const status = computed(() => countdown.value.status)
+const h = computed(() => countdown.value.h)
+const m = computed(() => countdown.value.m)
+const s = computed(() => countdown.value.s)
 </script>
 
 <style scoped>

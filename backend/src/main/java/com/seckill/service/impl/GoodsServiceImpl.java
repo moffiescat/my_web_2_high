@@ -14,9 +14,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class GoodsServiceImpl implements GoodsService {
@@ -59,6 +59,14 @@ public class GoodsServiceImpl implements GoodsService {
                         .ge(SeckillGoods::getEndTime, LocalDateTime.now())
                         .orderByAsc(SeckillGoods::getStartTime)
         );
+        // 批量查询商品详情，避免 N+1
+        List<Long> goodsIds = list.stream().map(SeckillGoods::getGoodsId).collect(Collectors.toList());
+        Map<Long, GoodsVo> goodsMap = Collections.emptyMap();
+        if (!goodsIds.isEmpty()) {
+            goodsMap = goodsMapper.getDetailByIds(goodsIds).stream()
+                    .collect(Collectors.toMap(GoodsVo::getId, g -> g, (a, b) -> a));
+        }
+
         List<SeckillGoodsVo> vos = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         for (SeckillGoods sg : list) {
@@ -77,8 +85,8 @@ public class GoodsServiceImpl implements GoodsService {
             } else {
                 vo.setStatus(1);
             }
-            // 填充商品基础信息
-            GoodsVo goodsVo = goodsMapper.getDetailById(sg.getGoodsId());
+            // 填充商品基础信息（从批量查询结果中获取）
+            GoodsVo goodsVo = goodsMap.get(sg.getGoodsId());
             if (goodsVo != null) {
                 vo.setGoodsName(goodsVo.getGoodsName());
                 vo.setGoodsImg(goodsVo.getGoodsImg());

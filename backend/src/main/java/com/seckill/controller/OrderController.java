@@ -25,8 +25,9 @@ public class OrderController {
     }
 
     @GetMapping("/detail/{orderId}")
-    public Result<OrderVo> detail(@PathVariable Long orderId) {
-        return Result.ok(orderService.getDetail(orderId));
+    public Result<OrderVo> detail(@PathVariable Long orderId, HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        return Result.ok(orderService.getDetail(userId, orderId));
     }
 
     @PostMapping("/cancel/{orderId}")
