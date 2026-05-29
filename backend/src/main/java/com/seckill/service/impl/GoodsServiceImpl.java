@@ -6,6 +6,7 @@ import com.seckill.constant.AppConstants;
 import com.seckill.mapper.GoodsMapper;
 import com.seckill.mapper.SeckillGoodsMapper;
 import com.seckill.service.GoodsService;
+import com.seckill.utils.PageResult;
 import com.seckill.utils.RedisKey;
 import com.seckill.vo.GoodsVo;
 import com.seckill.vo.SeckillGoodsVo;
@@ -33,8 +34,13 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    public List<GoodsVo> listGoods() {
-        return goodsMapper.listWithSeckill();
+    public PageResult<GoodsVo> listGoods(int page, int size) {
+        List<GoodsVo> all = goodsMapper.listWithSeckill();
+        int total = all.size();
+        int from = (page - 1) * size;
+        int to = Math.min(from + size, total);
+        List<GoodsVo> records = from < total ? all.subList(from, to) : Collections.emptyList();
+        return PageResult.of(total, page, size, records);
     }
 
     @Override
@@ -53,7 +59,7 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    public List<SeckillGoodsVo> listSeckillGoods() {
+    public PageResult<SeckillGoodsVo> listSeckillGoods(int page, int size) {
         List<SeckillGoods> list = seckillGoodsMapper.selectList(
                 new LambdaQueryWrapper<SeckillGoods>()
                         .ge(SeckillGoods::getEndTime, LocalDateTime.now())
@@ -94,6 +100,10 @@ public class GoodsServiceImpl implements GoodsService {
             }
             vos.add(vo);
         }
-        return vos;
+        int total = vos.size();
+        int from = (page - 1) * size;
+        int to = Math.min(from + size, total);
+        List<SeckillGoodsVo> records = from < total ? vos.subList(from, to) : Collections.emptyList();
+        return PageResult.of(total, page, size, records);
     }
 }

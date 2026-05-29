@@ -1,12 +1,11 @@
 package com.seckill.controller;
 
 import com.seckill.service.OrderService;
+import com.seckill.utils.PageResult;
 import com.seckill.utils.Result;
 import com.seckill.vo.OrderVo;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/order")
@@ -19,9 +18,11 @@ public class OrderController {
     }
 
     @GetMapping("/list")
-    public Result<List<OrderVo>> list(HttpServletRequest request) {
+    public Result<PageResult<OrderVo>> list(HttpServletRequest request,
+                                            @RequestParam(defaultValue = "1") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
         Long userId = (Long) request.getAttribute("userId");
-        return Result.ok(orderService.listByUser(userId));
+        return Result.ok(orderService.listByUser(userId, page, size));
     }
 
     @GetMapping("/detail/{orderId}")

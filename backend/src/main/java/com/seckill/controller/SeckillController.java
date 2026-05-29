@@ -1,5 +1,6 @@
 package com.seckill.controller;
 
+import com.seckill.annotation.RateLimit;
 import com.seckill.dto.SeckillDto;
 import com.seckill.service.SeckillService;
 import com.seckill.utils.Result;
@@ -24,6 +25,7 @@ public class SeckillController {
         return Result.ok(path);
     }
 
+    @RateLimit(window = 5, maxRequests = 5, message = "抢购太火爆，请稍后再试")
     @PostMapping("/{path}/execute")
     public Result<Long> execute(@PathVariable String path,
                                 @Valid @RequestBody SeckillDto dto,

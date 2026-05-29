@@ -1,15 +1,14 @@
 package com.seckill.service;
 
+import com.seckill.utils.PageResult;
 import com.seckill.vo.GoodsVo;
 import com.seckill.vo.SeckillGoodsVo;
 
-import java.util.List;
-
 public interface GoodsService {
 
-    List<GoodsVo> listGoods();
+    PageResult<GoodsVo> listGoods(int page, int size);
 
     GoodsVo getDetail(Long goodsId);
 
-    List<SeckillGoodsVo> listSeckillGoods();
+    PageResult<SeckillGoodsVo> listSeckillGoods(int page, int size);
 }

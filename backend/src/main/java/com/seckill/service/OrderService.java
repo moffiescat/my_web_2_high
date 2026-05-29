@@ -1,14 +1,13 @@
 package com.seckill.service;
 
+import com.seckill.utils.PageResult;
 import com.seckill.vo.OrderVo;
-
-import java.util.List;
 
 public interface OrderService {
 
     OrderVo getDetail(Long userId, Long orderId);
 
-    List<OrderVo> listByUser(Long userId);
+    PageResult<OrderVo> listByUser(Long userId, int page, int size);
 
     void cancel(Long userId, Long orderId);
 }

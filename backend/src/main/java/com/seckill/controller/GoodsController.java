@@ -1,6 +1,7 @@
 package com.seckill.controller;
 
 import com.seckill.service.GoodsService;
+import com.seckill.utils.PageResult;
 import com.seckill.utils.Result;
 import com.seckill.vo.GoodsVo;
 import com.seckill.vo.SeckillGoodsVo;
@@ -19,8 +20,9 @@ public class GoodsController {
     }
 
     @GetMapping("/list")
-    public Result<List<GoodsVo>> list() {
-        return Result.ok(goodsService.listGoods());
+    public Result<PageResult<GoodsVo>> list(@RequestParam(defaultValue = "1") int page,
+                                            @RequestParam(defaultValue = "12") int size) {
+        return Result.ok(goodsService.listGoods(page, size));
     }
 
     @GetMapping("/detail/{id}")
@@ -29,7 +31,8 @@ public class GoodsController {
     }
 
     @GetMapping("/seckill")
-    public Result<List<SeckillGoodsVo>> seckillGoods() {
-        return Result.ok(goodsService.listSeckillGoods());
+    public Result<PageResult<SeckillGoodsVo>> seckillGoods(@RequestParam(defaultValue = "1") int page,
+                                                            @RequestParam(defaultValue = "12") int size) {
+        return Result.ok(goodsService.listSeckillGoods(page, size));
     }
 }

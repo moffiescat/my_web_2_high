@@ -87,3 +87,19 @@ snowflake:
 
 server:
   port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# 应用自定义配置
+app:
+  error:
+    detail-enabled: ${ERROR_DETAIL_ENABLED:true}

@@ -2,8 +2,10 @@ package com.seckill.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.seckill.constant.AppConstants;
+import com.seckill.dto.ChangePasswordDto;
 import com.seckill.dto.LoginDto;
 import com.seckill.dto.RegisterDto;
+import com.seckill.dto.ResetPasswordDto;
 import com.seckill.entity.User;
 import com.seckill.mapper.UserMapper;
 import com.seckill.service.UserService;
@@ -76,5 +78,29 @@ public class UserServiceImpl implements UserService {
         vo.setRegisterTime(user.getRegisterTime());
         vo.setLastLoginTime(user.getLastLoginTime());
         return vo;
+    }
+
+    @Override
+    public void changePassword(Long userId, ChangePasswordDto dto) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        if (!encoder.matches(dto.getOldPassword(), user.getPassword())) {
+            throw new RuntimeException("旧密码不正确");
+        }
+        user.setPassword(encoder.encode(dto.getNewPassword()));
+        userMapper.updateById(user);
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordDto dto) {
+        User user = userMapper.selectOne(
+                new LambdaQueryWrapper<User>().eq(User::getPhone, dto.getPhone()));
+        if (user == null) {
+            throw new RuntimeException("该手机号未注册");
+        }
+        user.setPassword(encoder.encode(dto.getNewPassword()));
+        userMapper.updateById(user);
     }
 }

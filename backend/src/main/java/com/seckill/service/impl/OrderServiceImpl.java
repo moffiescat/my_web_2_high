@@ -9,6 +9,7 @@ import com.seckill.enums.OrderStatus;
 import com.seckill.mapper.OrderMapper;
 import com.seckill.mapper.SeckillGoodsMapper;
 import com.seckill.service.OrderService;
+import com.seckill.utils.PageResult;
 import com.seckill.utils.RedisKey;
 import com.seckill.vo.OrderVo;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -43,13 +44,18 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderVo> listByUser(Long userId) {
-        List<Order> orders = orderMapper.selectList(
+    public PageResult<OrderVo> listByUser(Long userId, int page, int size) {
+        List<Order> all = orderMapper.selectList(
                 new LambdaQueryWrapper<Order>()
                         .eq(Order::getUserId, userId)
                         .orderByDesc(Order::getCreateTime)
         );
-        return orders.stream().map(this::toVo).collect(Collectors.toList());
+        List<OrderVo> vos = all.stream().map(this::toVo).collect(Collectors.toList());
+        int total = vos.size();
+        int from = (page - 1) * size;
+        int to = Math.min(from + size, total);
+        List<OrderVo> records = from < total ? vos.subList(from, to) : List.of();
+        return PageResult.of(total, page, size, records);
     }
 
     @Override

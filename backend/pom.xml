@@ -128,6 +128,12 @@
             <version>3.0.0</version>
         </dependency>
 
+        <!-- Spring Boot Actuator (健康检查 + 指标) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

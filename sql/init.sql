@@ -80,6 +80,36 @@ VALUES
 (2, 'MacBook Pro 14', '苹果笔记本', '/imgs/macbook14.png', 14999.00, 50, 'M3 Pro 芯片 / 18GB 内存'),
 (3, 'AirPods Pro 2', '苹果降噪耳机', '/imgs/airpods.png', 1899.00, 200, 'H2 芯片 / USB-C 接口');
 
+-- 购物车表
+DROP TABLE IF EXISTS t_cart;
+CREATE TABLE t_cart (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '购物车ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    goods_id BIGINT NOT NULL COMMENT '商品ID',
+    goods_name VARCHAR(64) NOT NULL COMMENT '商品名称',
+    goods_img VARCHAR(255) DEFAULT NULL COMMENT '商品图片',
+    goods_price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '商品价格',
+    quantity INT NOT NULL DEFAULT 1 COMMENT '数量',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '添加时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_uid_gid (user_id, goods_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购物车表';
+
+-- 通知表
+DROP TABLE IF EXISTS t_notification;
+CREATE TABLE t_notification (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    title VARCHAR(128) NOT NULL COMMENT '通知标题',
+    content VARCHAR(512) DEFAULT NULL COMMENT '通知内容',
+    type VARCHAR(32) NOT NULL DEFAULT 'system' COMMENT '类型: seckill/order/system',
+    is_read TINYINT NOT NULL DEFAULT 0 COMMENT '0:未读 1:已读',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_user_id (user_id),
+    KEY idx_user_read (user_id, is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
+
 -- 插入秒杀商品 (时间设为未来几天)
 INSERT INTO t_seckill_goods (goods_id, seckill_price, stock_count, start_time, end_time)
 VALUES
